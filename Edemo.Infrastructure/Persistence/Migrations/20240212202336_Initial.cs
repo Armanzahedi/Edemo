@@ -182,9 +182,9 @@ namespace Edemo.Infrastructure.Persistence.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
-                    Nickname_Value = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    PhoneNumber_Number = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Nickname = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {

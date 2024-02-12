@@ -11,7 +11,7 @@ public class TopUpBeneficiary : EntityBase<Guid>, IAggregateRoot, ISoftDeletable
     }
 
     public Guid UserId { get; private set; }
-    public Nickname Nickname { get; private set; }
+    public Nickname? Nickname { get; private set; }
     public UAEPhoneNumber? PhoneNumber { get; private set; }
 
     private readonly List<TopUpTransaction> _topUpTransactions = new();
