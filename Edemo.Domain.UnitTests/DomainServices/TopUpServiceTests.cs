@@ -2,6 +2,7 @@
 using Edemo.Domain.TopUp;
 using Edemo.Domain.TopUp.Specs;
 using Edemo.Domain.TopUp.ValueObjects;
+using Edemo.Domain.User;
 using NotFoundException = Edemo.Domain.Common.Exceptions.NotFoundException;
 
 namespace Edemo.Domain.UnitTests.DomainServices;
@@ -22,6 +23,8 @@ public class TopUpServiceTests
         _transactionRepo = Substitute.For<IRepository<TopUpTransaction>>();
         _dateTimeProvider = Substitute.For<IDateTimeProvider>();
         _topUpOptions = Substitute.For<ITopUpOptions>();
+        _topUpOptions.AvailableTopUpAmounts.Returns(new List<decimal> { 50, 100, 200 });
+
         _topUpService = new TopUpService(_beneficiaryRepo, _transactionRepo, _dateTimeProvider, _topUpOptions);
     }
 
@@ -93,6 +96,37 @@ public class TopUpServiceTests
 
         // Assert
         await act.Should().ThrowAsync<NotFoundException>().WithMessage("Beneficiary was not found.");
+    }
+    [Fact]
+    public async Task PerformTopUp_WhenAmountNotValid_ShouldThrowException()
+    {
+        // Arrange
+        var user = new User.User();
+        var beneficiary = TopUpBeneficiary.Create(user.Id, "test", "971501749678");
+        var invalidAmount = 999;
+
+        // Act
+        Func<Task> act = async () => await _topUpService.PerformTopUp(user, beneficiary, invalidAmount);
+
+        // Assert
+        await act.Should().ThrowAsync<Exception>()
+            .WithMessage("TopUp amount is not in the range of valid TopUp amounts.");
+    }
+
+    [Fact]
+    public async Task PerformTopUp_WhenBeneficiaryDoesNotBelongToUser_ShouldThrowException()
+    {
+        // Arrange
+        var user = new User.User();
+        var beneficiary = TopUpBeneficiary.Create(Guid.NewGuid(), "test", "971501749678");
+        var invalidAmount = 50;
+
+        // Act
+        Func<Task> act = async () => await _topUpService.PerformTopUp(user, beneficiary, invalidAmount);
+
+        // Assert
+        await act.Should().ThrowAsync<Exception>()
+            .WithMessage("Beneficiary does not belong to the user");
     }
 
     [Fact]

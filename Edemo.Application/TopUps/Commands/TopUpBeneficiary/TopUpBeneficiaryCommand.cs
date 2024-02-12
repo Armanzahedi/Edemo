@@ -23,7 +23,6 @@ public class TopUpBeneficiaryCommandHandler(
     TopUpService topUpService,
     IRepository<User> userRepo,
     IRepository<Domain.TopUp.TopUpBeneficiary> beneficiaryRepo,
-    ITopUpOptions topUpOptions,
     IUserBalanceService userBalanceService,
     IPublisher publisher,
     IMapper mapper) : IRequestHandler<TopUpBeneficiaryCommand, TransactionResult>
@@ -32,8 +31,6 @@ public class TopUpBeneficiaryCommandHandler(
     {
         Guard.Against.NotFound(currentUser.UserId, "Current User was not found");
 
-        Guard.Against.Expression(x => topUpOptions.AvailableTopUpAmounts.Contains(x) == false, request.Amount,
-            "TopUp amount is not in the range of valid TopUp amounts.");
 
         var user = await userRepo.GetByIdAsync(currentUser.UserId.Value, cancellationToken);
         Guard.Against.NotFound(user, "User was not found.");

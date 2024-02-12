@@ -18,7 +18,6 @@ public class TopUpBeneficiaryCommandHandlerTests
     private readonly TopUpService _topUpService;
     private readonly IRepository<User> _userRepo;
     private readonly IRepository<TopUpBeneficiary> _beneficiaryRepo;
-    private readonly ITopUpOptions _topUpOptions;
     private readonly IUserBalanceService _userBalanceService;
     private readonly IPublisher _publisher;
     private readonly IMapper _mapper;
@@ -30,13 +29,10 @@ public class TopUpBeneficiaryCommandHandlerTests
         _topUpService = Substitute.For<TopUpService>();
         _userRepo = Substitute.For<IRepository<User>>();
         _beneficiaryRepo = Substitute.For<IRepository<TopUpBeneficiary>>();
-        _topUpOptions = Substitute.For<ITopUpOptions>();
-        _topUpOptions.AvailableTopUpAmounts.Returns(new List<decimal>() {50,100 });
         _userBalanceService = Substitute.For<IUserBalanceService>();
         _publisher = Substitute.For<IPublisher>();
         _mapper = Substitute.For<IMapper>();
-        _handler = new TopUpBeneficiaryCommandHandler(_currentUser, _topUpService, _userRepo, _beneficiaryRepo,
-            _topUpOptions, _userBalanceService, _publisher, _mapper);
+        _handler = new TopUpBeneficiaryCommandHandler(_currentUser, _topUpService, _userRepo, _beneficiaryRepo, _userBalanceService, _publisher, _mapper);
         
     }
 

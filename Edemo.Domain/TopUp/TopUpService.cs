@@ -45,7 +45,7 @@ public class TopUpService : IDomainService
     public async Task DeleteBeneficiary(Guid userId, Guid beneficiaryId)
     {
         var beneficiary =
-            await _beneficiaryRepo.FirstOrDefaultAsync(new BeneficiaryByUserIdBeneficiaryIdSpec(userId,beneficiaryId));
+            await _beneficiaryRepo.FirstOrDefaultAsync(new BeneficiaryByUserIdBeneficiaryIdSpec(userId, beneficiaryId));
 
         Guard.Against.NotFound(beneficiary, "Beneficiary was not found.");
 
@@ -57,8 +57,7 @@ public class TopUpService : IDomainService
 
         if (_topUpRequestIsValidated == false)
         {
-            await ValidateBeneficiaryAllowedTopUp(user, beneficiary, topUpAmount);
-            await ValidateUserAllowedTopUp(user, topUpAmount);
+            await ValidateTopUpRequest(user, beneficiary, topUpAmount);
         }
 
         var transaction = TopUpTransaction.Create(user.Id,
@@ -66,7 +65,7 @@ public class TopUpService : IDomainService
             topUpAmount,
             _dateTimeProvider.UtcNow,
             _topUpOptions.TopUpTransactionFee);
-        
+
         try
         {
             await _transactionRepo.AddAsync(transaction);
@@ -75,12 +74,19 @@ public class TopUpService : IDomainService
         catch (Exception e)
         {
             Console.WriteLine(e);
-            throw new TopUpTransactionFailedException(transaction,e);
+            throw new TopUpTransactionFailedException(transaction, e);
         }
     }
 
     public async Task ValidateTopUpRequest(User.User user, TopUpBeneficiary beneficiary, decimal topUpAmount)
     {
+
+        Guard.Against.Expression(x => _topUpOptions.AvailableTopUpAmounts.Contains(x) == false, topUpAmount,
+            "TopUp amount is not in the range of valid TopUp amounts.");
+
+        if (beneficiary.UserId != user.Id)
+            throw new Exception("Beneficiary does not belong to the user");
+
         await ValidateBeneficiaryAllowedTopUp(user, beneficiary, topUpAmount);
         await ValidateUserAllowedTopUp(user, topUpAmount);
         _topUpRequestIsValidated = true;
