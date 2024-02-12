@@ -27,8 +27,8 @@ app.MapGet("/balance/{userId}", (Guid userId, UserBalance userBalance) =>
 
 app.MapPost("/balance/{userId}/debit", (Guid userId, [FromBody] DebitRequest request, UserBalance userBalance) =>
     {
-        var blockId = userBalance.Debit(request.Amount);
-        return new DebitResponse(blockId,request.Amount);
+        var  debitId = userBalance.Debit(request.Amount);
+        return new DebitResponse(debitId,request.Amount);
     })
     .WithName("Debit")
     .WithOpenApi();
@@ -77,30 +77,30 @@ public class UserBalance
 
     public Guid Debit(decimal amount)
     {
-        var blockId = Guid.NewGuid();
+        var debitId = Guid.NewGuid();
         Balance -= amount;
         BlockedBalance += amount;
-        Blocks.Add(blockId, amount);
+        Blocks.Add(debitId, amount);
 
-        return blockId;
+        return debitId;
     }
 
-    public void ReleaseDebit(Guid blockId)
+    public void ReleaseDebit(Guid debitId)
     {
-        if (Blocks.TryGetValue(blockId, out var value))
+        if (Blocks.TryGetValue(debitId, out var value))
         {
             BlockedBalance -= value;
             Balance += value;
-            Blocks.Remove(blockId);
+            Blocks.Remove(debitId);
         }
     }
 
-    public void VerifyDebit(Guid blockId)
+    public void VerifyDebit(Guid debitId)
     {
-        if (Blocks.TryGetValue(blockId, out var value))
+        if (Blocks.TryGetValue(debitId, out var value))
         {
             BlockedBalance -= value;
-            Blocks.Remove(blockId);
+            Blocks.Remove(debitId);
         }
     }
 }

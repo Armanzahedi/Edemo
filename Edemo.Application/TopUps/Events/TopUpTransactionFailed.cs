@@ -3,4 +3,4 @@ using MediatR;
 
 namespace Edemo.Application.TopUps.Events;
 
-public record TopUpTransactionFailed(Guid UserBalanceBlockId, TopUpTransaction Transaction) : INotification;
+public record TopUpTransactionFailed(Guid DebitId, TopUpTransaction Transaction) : INotification;
