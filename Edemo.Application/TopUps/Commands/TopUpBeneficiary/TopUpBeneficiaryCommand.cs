@@ -5,7 +5,6 @@ using Edemo.Application.TopUps.Events;
 using Edemo.Domain.Common;
 using Edemo.Domain.Common.Exceptions;
 using Edemo.Domain.TopUp;
-using Edemo.Domain.TopUp.Events;
 using Edemo.Domain.TopUp.Exceptions;
 using Edemo.Domain.TopUp.Specs;
 using Edemo.Domain.User;
@@ -52,17 +51,17 @@ public class TopUpBeneficiaryCommandHandler(
         Guard.Against.Expression(x => x < request.Amount, userBalance.Balance, "Insufficient balance.");
 
         
-        var blockResponse = await userBalanceService.BlockAsync(user.Id, new BlockRequest(request.Amount));
+        var debitResponse = await userBalanceService.DebitAsync(user.Id, new DebitRequest(request.Amount));
         try
         {
             var trx = await topUpService.PerformTopUp(user, beneficiary, request.Amount);
-            await publisher.Publish(new TopUpTransactionSucceeded(blockResponse.BlockId,trx), cancellationToken);
+            await publisher.Publish(new TopUpTransactionSucceeded(debitResponse.DebitId,trx), cancellationToken);
 
             return mapper.Map<TransactionResult>(trx);
         }
         catch (TopUpTransactionFailedException e)
         {
-            await publisher.Publish(new TopUpTransactionFailed(blockResponse.BlockId,e.Transaction), cancellationToken);
+            await publisher.Publish(new TopUpTransactionFailed(debitResponse.DebitId,e.Transaction), cancellationToken);
             throw;
         }
 

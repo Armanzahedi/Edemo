@@ -25,28 +25,28 @@ app.MapGet("/balance/{userId}", (Guid userId, UserBalance userBalance) =>
     .WithName("GetUserBalance")
     .WithOpenApi();
 
-app.MapPost("/balance/{userId}/block", (Guid userId, [FromBody] BlockRequest request, UserBalance userBalance) =>
+app.MapPost("/balance/{userId}/debit", (Guid userId, [FromBody] DebitRequest request, UserBalance userBalance) =>
     {
-        var blockId = userBalance.Block(request.Amount);
-        return new BlockResponse(blockId,request.Amount);
+        var blockId = userBalance.Debit(request.Amount);
+        return new DebitResponse(blockId,request.Amount);
     })
-    .WithName("Block")
+    .WithName("Debit")
     .WithOpenApi();
 
-app.MapPost("/balance/{userId}/unblock", (Guid userId, [FromBody] ReleaseBlockRequest request, UserBalance userBalance) =>
+app.MapPost("/balance/{userId}/debit/release", (Guid userId, [FromBody] ReleaseDebitRequest request, UserBalance userBalance) =>
     {
-        userBalance.ReleaseBlock(request.BlockId);
+        userBalance.ReleaseDebit(request.DebitId);
         return userBalance;
     })
-    .WithName("ReleaseBalance")
+    .WithName("ReleaseDebit")
     .WithOpenApi();
 
-app.MapPost("/balance/{userId}/debit", (Guid userId, [FromBody] DebitBlockRequest request, UserBalance userBalance) =>
+app.MapPost("/balance/{userId}/debit/verify", (Guid userId, [FromBody] VerifyDebitRequest request, UserBalance userBalance) =>
     {
-        userBalance.Debit(request.BlockId);
+        userBalance.VerifyDebit(request.DebitId);
         return userBalance;
     })
-    .WithName("DebitBlock")
+    .WithName("VerifyDebit")
     .WithOpenApi();
 app.MapPost("/balance/{userId}/credit", (Guid userId, [FromBody] CreditRequest request, UserBalance userBalance) =>
     {
@@ -57,14 +57,13 @@ app.MapPost("/balance/{userId}/credit", (Guid userId, [FromBody] CreditRequest r
     .WithOpenApi();
 app.Run();
 
-public record BlockRequest(decimal Amount);
-
-public record BlockResponse(Guid BlockId, decimal Amount);
-
-public record DebitBlockRequest(Guid BlockId);
 public record DebitRequest(decimal Amount);
 
-public record ReleaseBlockRequest(Guid BlockId);
+public record DebitResponse(Guid DebitId, decimal Amount);
+
+public record VerifyDebitRequest(Guid DebitId);
+
+public record ReleaseDebitRequest(Guid DebitId);
 
 record CreditRequest(decimal Amount);
 
@@ -74,10 +73,9 @@ public class UserBalance
     public decimal Balance { get; private set; } = 1000;
     public decimal BlockedBalance { get; private set; } = 0;
     public Dictionary<Guid, decimal> Blocks { get; private set; } = new();
-    public void Debit(decimal amount) => Balance -= amount;
     public void Credit(decimal amount) => Balance += amount;
 
-    public Guid Block(decimal amount)
+    public Guid Debit(decimal amount)
     {
         var blockId = Guid.NewGuid();
         Balance -= amount;
@@ -87,7 +85,7 @@ public class UserBalance
         return blockId;
     }
 
-    public void ReleaseBlock(Guid blockId)
+    public void ReleaseDebit(Guid blockId)
     {
         if (Blocks.TryGetValue(blockId, out var value))
         {
@@ -97,7 +95,7 @@ public class UserBalance
         }
     }
 
-    public void Debit(Guid blockId)
+    public void VerifyDebit(Guid blockId)
     {
         if (Blocks.TryGetValue(blockId, out var value))
         {

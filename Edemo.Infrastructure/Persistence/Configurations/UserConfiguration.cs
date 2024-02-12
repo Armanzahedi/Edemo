@@ -12,7 +12,7 @@ public class UserConfiguration : BaseEntityTypeConfiguration<User>
             .HasMany(p => p.TopUpBeneficiaries)
             .WithOne()
             .HasForeignKey(i => i.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.NoAction);
         
         builder
             .HasMany(p => p.TopUpTransactions)

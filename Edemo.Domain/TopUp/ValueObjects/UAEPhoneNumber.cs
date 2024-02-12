@@ -5,7 +5,7 @@ namespace Edemo.Domain.TopUp.ValueObjects;
 
 public class UAEPhoneNumber : ValueObject
 {
-    public string Number { get; }
+    public string Number { get; private set; }
 
     private UAEPhoneNumber()
     {

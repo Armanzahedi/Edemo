@@ -4,7 +4,7 @@ using Edemo.Domain.TopUp.ValueObjects;
 namespace Edemo.Domain.TopUp;
 
 [Auditable]
-public class TopUpBeneficiary : EntityBase<Guid>, IAggregateRoot
+public class TopUpBeneficiary : EntityBase<Guid>, IAggregateRoot, ISoftDeletableEntity
 {
     private TopUpBeneficiary()
     {
@@ -27,4 +27,6 @@ public class TopUpBeneficiary : EntityBase<Guid>, IAggregateRoot
             PhoneNumber = UAEPhoneNumber.Create(phoneNumber)
         };
     }
+
+    public bool IsDeleted { get; set; }
 }

@@ -8,20 +8,10 @@ public class TopUpBeneficiaryConfiguration : BaseEntityTypeConfiguration<TopUpBe
 {
     public override void Configure(EntityTypeBuilder<TopUpBeneficiary> builder)
     {
-        builder.OwnsOne(x => x.Nickname,
-            nickname =>
-        {
-            nickname.Property(n => n.Value)
-                .HasMaxLength(20)
-                .IsRequired();
-        });
-        builder.OwnsOne(x => x.PhoneNumber,
-            phoneNumber =>
-        {
-            phoneNumber
-                .Property(n => n.Number)
-                .IsRequired();
-        });
+        builder.ComplexProperty(x => x.Nickname, nickname => nickname.IsRequired());
+        
+        builder.ComplexProperty(x => x.PhoneNumber,
+            phoneNumber => phoneNumber.IsRequired());
 
         builder
             .HasMany(p => p.TopUpTransactions)

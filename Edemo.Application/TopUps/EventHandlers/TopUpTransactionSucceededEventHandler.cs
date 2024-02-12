@@ -8,7 +8,7 @@ public class TopUpTransactionSucceededEventHandler(IUserBalanceService userBalan
 {
     public async Task Handle(TopUpTransactionSucceeded notification, CancellationToken cancellationToken)
     {
-        await userBalanceService.DebitAsync(notification.Transaction.UserId,
-            new DebitRequest(notification.UserBalanceBlockId));
+        await userBalanceService.VerifyDebitAsync(notification.Transaction.UserId,
+            new VerifyDebitRequest(notification.DebitId));
     }
 }

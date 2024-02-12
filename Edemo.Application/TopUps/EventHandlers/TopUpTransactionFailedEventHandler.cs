@@ -8,7 +8,7 @@ public class TopUpTransactionFailedEventHandler(IUserBalanceService userBalanceS
 {
     public async Task Handle(TopUpTransactionFailed notification, CancellationToken cancellationToken)
     {
-        await userBalanceService.ReleaseBlockAsync(notification.Transaction.UserId,
-            new ReleaseBlockRequest(notification.UserBalanceBlockId));
+        await userBalanceService.ReleaseDebitAsync(notification.Transaction.UserId,
+            new ReleaseDebitRequest(notification.UserBalanceBlockId));
     }
 }
