@@ -1,29 +1,43 @@
 ﻿using Ardalis.GuardClauses;
 using Edemo.Domain.Common;
 using Edemo.Domain.Common.Exceptions;
-using Edemo.Domain.ExternalServices;
+using Edemo.Domain.TopUp.Exceptions;
 using Edemo.Domain.TopUp.Specs;
 
 namespace Edemo.Domain.TopUp;
 
-public class TopUpService(
-    IRepository<User.User> userRepo,
-    IRepository<TopUpBeneficiary> beneficiaryRepo,
-    IRepository<TopUpTransaction> transactionRepo,
-    IDateTimeProvider dateTimeProvider,
-    IUserBalanceService userBalanceService,
-    ITopUpOptions topUpOptions) : IDomainService
+public class TopUpService : IDomainService
 {
+    public TopUpService()
+    {
+    }
+    private bool _topUpRequestIsValidated;
+    private readonly IRepository<TopUpBeneficiary> _beneficiaryRepo;
+    private readonly IRepository<TopUpTransaction> _transactionRepo;
+    private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly ITopUpOptions _topUpOptions;
+
+    public TopUpService(IRepository<TopUpBeneficiary> beneficiaryRepo,
+        IRepository<TopUpTransaction> transactionRepo,
+        IDateTimeProvider dateTimeProvider,
+        ITopUpOptions topUpOptions)
+    {
+        _beneficiaryRepo = beneficiaryRepo;
+        _transactionRepo = transactionRepo;
+        _dateTimeProvider = dateTimeProvider;
+        _topUpOptions = topUpOptions;
+    }
+
     public async Task<TopUpBeneficiary> CreateBeneficiary(Guid userId, string nickName, string phoneNumber)
     {
-        var userBeneficiariesCount = await beneficiaryRepo.CountAsync(new BeneficiaryByUserIdSpec(userId));
+        var userBeneficiariesCount = await _beneficiaryRepo.CountAsync(new BeneficiaryByUserIdSpec(userId));
 
-        Guard.Against.Expression(x => x >= topUpOptions.MaxTopUpBeneficiaries, userBeneficiariesCount,
-            $"Cannot add more than {topUpOptions.MaxTopUpBeneficiaries} Beneficiaries.");
+        Guard.Against.Expression(x => x >= _topUpOptions.MaxTopUpBeneficiaries, userBeneficiariesCount,
+            $"Cannot add more than {_topUpOptions.MaxTopUpBeneficiaries} Beneficiaries.");
 
         var beneficiary = TopUpBeneficiary.Create(userId, nickName, phoneNumber);
 
-        await beneficiaryRepo.AddAsync(beneficiary);
+        await _beneficiaryRepo.AddAsync(beneficiary);
 
         return beneficiary;
     }
@@ -31,64 +45,56 @@ public class TopUpService(
     public async Task DeleteBeneficiary(Guid userId, Guid beneficiaryId)
     {
         var beneficiary =
-            await beneficiaryRepo.FirstOrDefaultAsync(new BeneficiaryByUserIdBeneficiaryIdSpec(userId,beneficiaryId));
+            await _beneficiaryRepo.FirstOrDefaultAsync(new BeneficiaryByUserIdBeneficiaryIdSpec(userId,beneficiaryId));
 
         Guard.Against.NotFound(beneficiary, "Beneficiary was not found.");
 
-        await beneficiaryRepo.DeleteAsync(beneficiary);
+        await _beneficiaryRepo.DeleteAsync(beneficiary);
     }
 
-    public async Task<TopUpTransaction> PerformTopUp(Guid userId, Guid beneficiaryId, decimal topUpAmount)
+    public async Task<TopUpTransaction> PerformTopUp(User.User user, TopUpBeneficiary beneficiary, decimal topUpAmount)
     {
-        Guard.Against.Expression(x => topUpOptions.AvailableTopUpAmounts.Contains(x) == false, topUpAmount,
-            "TopUp amount is not in the range of valid TopUp amounts.");
 
-        var user = await userRepo.GetByIdAsync(userId);
-        Guard.Against.NotFound(user, "User was not found.");
+        if (_topUpRequestIsValidated == false)
+        {
+            await ValidateBeneficiaryAllowedTopUp(user, beneficiary, topUpAmount);
+            await ValidateUserAllowedTopUp(user, topUpAmount);
+        }
 
-        var beneficiary =
-            await beneficiaryRepo.FirstOrDefaultAsync(new BeneficiaryByUserIdBeneficiaryIdSpec(userId, beneficiaryId));
-        Guard.Against.NotFound(beneficiary, "Beneficiary was not found.");
-
-
-        await ValidateBeneficiaryAllowedTopUp(user, beneficiary, topUpAmount);
-        await ValidateUserAllowedTopUp(user, topUpAmount);
-
-
-        var userBalance = await userBalanceService.GetBalanceAsync(userId);
-        Guard.Against.Expression(x => x < topUpAmount, userBalance.Balance, "Insufficient balance.");
-
-        await userBalanceService.DebitBalanceAsync(userId, new DebitRequest(topUpAmount));
-
+        var transaction = TopUpTransaction.Create(user.Id,
+            beneficiary.Id,
+            topUpAmount,
+            _dateTimeProvider.UtcNow,
+            _topUpOptions.TopUpTransactionFee);
+        
         try
         {
-            var transaction = TopUpTransaction.Create(userId,
-                beneficiaryId,
-                topUpAmount,
-                dateTimeProvider.UtcNow,
-                topUpOptions.TopUpTransactionFee);
-
-            await transactionRepo.AddAsync(transaction);
+            await _transactionRepo.AddAsync(transaction);
             return transaction;
         }
         catch (Exception e)
         {
-            await userBalanceService.CreditBalanceAsync(userId, new CreditRequest(topUpAmount));
             Console.WriteLine(e);
-            throw;
+            throw new TopUpTransactionFailedException(transaction,e);
         }
     }
 
+    public async Task ValidateTopUpRequest(User.User user, TopUpBeneficiary beneficiary, decimal topUpAmount)
+    {
+        await ValidateBeneficiaryAllowedTopUp(user, beneficiary, topUpAmount);
+        await ValidateUserAllowedTopUp(user, topUpAmount);
+        _topUpRequestIsValidated = true;
+    }
     private async Task ValidateBeneficiaryAllowedTopUp(User.User user, TopUpBeneficiary beneficiary,
         decimal topUpAmount)
     {
         var userAllowedMonthlyTopUpPerBeneficiary = user.IsVerified
-            ? topUpOptions.VerifiedUserTopUpLimitPerMonthPerBeneficiary
-            : topUpOptions.UnverifiedUserTopUpLimitPerMonthPerBeneficiary;
+            ? _topUpOptions.VerifiedUserTopUpLimitPerMonthPerBeneficiary
+            : _topUpOptions.UnverifiedUserTopUpLimitPerMonthPerBeneficiary;
 
 
-        var beneficiaryTotalTopUpAmount = (await transactionRepo
-            .ListAsync(new TransactionsAmountByBeneficiaryId(beneficiary.Id, dateTimeProvider.UtcNow.Month))).Sum();
+        var beneficiaryTotalTopUpAmount = (await _transactionRepo
+            .ListAsync(new TransactionsAmountByBeneficiaryId(beneficiary.Id, _dateTimeProvider.UtcNow.Month))).Sum();
 
         Guard.Against.Expression(x => x + topUpAmount > userAllowedMonthlyTopUpPerBeneficiary,
             beneficiaryTotalTopUpAmount, "User Monthly allowed top-up per beneficiary exceeded.");
@@ -96,10 +102,10 @@ public class TopUpService(
 
     private async Task ValidateUserAllowedTopUp(User.User user, decimal topUpAmount)
     {
-        var userTotalTopUpAmount = (await transactionRepo
-            .ListAsync(new TransactionsAmountByUserId(user.Id, dateTimeProvider.UtcNow.Month))).Sum();
+        var userTotalTopUpAmount = (await _transactionRepo
+            .ListAsync(new TransactionsAmountByUserId(user.Id, _dateTimeProvider.UtcNow.Month))).Sum();
 
-        Guard.Against.Expression(x => x + topUpAmount > topUpOptions.UserTotalTopUpMonthlyLimit,
+        Guard.Against.Expression(x => x + topUpAmount > _topUpOptions.UserTotalTopUpMonthlyLimit,
             userTotalTopUpAmount,
             "User Monthly allowed top-up exceeded.");
     }

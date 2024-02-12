@@ -1,4 +1,4 @@
-﻿using Edemo.Domain.ExternalServices;
+﻿using Edemo.Application.Common.Interfaces.ExternalServices;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;

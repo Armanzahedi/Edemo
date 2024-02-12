@@ -22,7 +22,6 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseHangfireDashboard();
 }
 
 app.UseHttpsRedirection();
@@ -43,6 +42,5 @@ app.UseEndpoints(endpoints =>
 
 
 await app.InitializeDb();
-app.StartRecurringJobs();
 
 app.Run();
