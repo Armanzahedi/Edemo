@@ -17,6 +17,7 @@ public static class GuardClausesExtensions
 
         return input;
     }
+
     public static T Expression<T>(this IGuardClause guardClause,
         Func<T, bool> func,
         T input,

@@ -1,4 +1,5 @@
-﻿using Edemo.Application.Common.Extensions.PaginatedList;
+﻿using Edemo.Api.Common;
+using Edemo.Application.Common.Extensions.PaginatedList;
 using Edemo.Application.TopUps;
 using Edemo.Application.TopUps.Commands.CreateBeneficiary;
 using Edemo.Application.TopUps.Commands.DeleteBeneficiary;
@@ -20,7 +21,10 @@ public class BeneficiariesController : ApiControllerBase
     public async Task<ActionResult> AddBeneficiary([FromBody] CreateBeneficiaryCommand command)
     {
         var result = await Mediator.Send(command);
-        return CreatedAtAction("GetUserBeneficiary", new { projectId = result.Id }, result);
+        
+        return result
+            .ToActionResult(val => 
+             CreatedAtAction("GetUserBeneficiary", new { projectId = val.Id }, val));
     }
 
     [HttpGet("{BeneficiaryId}")]
